@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Practice Activity: Bench Test DoseMate v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f3fbf5;
+    --ink:#14213d;
+    --ink-soft:#4b5671;
+    --cobalt:#0b5394;
+    --plum:#741b47;
+    --coral:#ff6f59;
+    --cyan:#1fb5d6;
+    --gold:#f5b700;
+    --lime:#57b947;
+    --tang:#ff9f1c;
+    --ok:#2b9348;
+    --miss:#e03e52;
+    --sans:"Space Grotesk","Segoe UI",system-ui,sans-serif;
+    --mono:"DM Mono",ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--sans);color:var(--ink);background:var(--bg);min-height:100vh;line-height:1.5;position:relative;overflow-x:hidden}
+  body::before{
+    content:"";position:fixed;inset:-15%;z-index:-2;
+    background:
+      radial-gradient(34% 30% at 6% 18%, rgba(87,185,71,.45), transparent 70%),
+      radial-gradient(32% 30% at 96% 10%, rgba(31,181,214,.45), transparent 70%),
+      radial-gradient(38% 34% at 90% 92%, rgba(255,111,89,.42), transparent 70%),
+      radial-gradient(34% 30% at 8% 95%, rgba(245,183,0,.42), transparent 70%),
+      radial-gradient(26% 22% at 52% 48%, rgba(116,27,71,.10), transparent 70%);
+  }
+  .grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.30;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .08  0 0 0 0 .13  0 0 0 0 .24  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
+
+  .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .brand b{display:block;font-size:18px;color:var(--cobalt);letter-spacing:.2px}
+  .brand span{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+  .chip{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:#fff;background:var(--plum);
+    padding:7px 13px;border-radius:8px;transform:rotate(-1.5deg);box-shadow:3px 3px 0 var(--gold)}
+
+  /* ruler progress */
+  .ruler{background:#fff;border-radius:16px;padding:12px 14px 10px;margin-bottom:18px;border:2px solid var(--ink);box-shadow:0 5px 0 var(--ink)}
+  .ticks{display:flex;gap:3px;align-items:flex-end;height:30px}
+  .tick{flex:1;height:14px;border-radius:3px;background:rgba(20,33,61,.12);transition:height .25s,background .25s}
+  .tick.first{height:24px}
+  .tick.cur{height:28px;background:var(--seg);outline:2px solid var(--ink)}
+  .tick.ok{background:var(--ok)}
+  .tick.no{background:repeating-linear-gradient(45deg,var(--miss) 0 4px,#ffd2d8 4px 7px)}
+  .seglabels{display:flex;gap:3px;margin-top:6px}
+  .seglabels div{font-family:var(--mono);font-size:11px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:3px solid var(--seg);padding-top:3px}
+  .seglabels div.on{color:var(--ink);font-weight:500}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px;align-items:start}
+  .layout.full{grid-template-columns:minmax(0,1fr)}
+  .layout>*{min-width:0}
+  .layout.full .log{display:none}
+
+  .card{background:#fff;border-radius:22px;padding:24px;border:2px solid var(--ink);box-shadow:8px 8px 0 var(--sc,var(--cobalt));position:relative}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--sc,var(--cobalt));font-weight:500}
+  h1{font-size:clamp(28px,4.5vw,42px);line-height:1.06;margin:8px 0 12px;font-weight:700;letter-spacing:-.6px}
+  h2{font-size:clamp(22px,3vw,30px);line-height:1.15;margin:6px 0 10px;font-weight:700}
+  h3{font-size:16px;margin:0 0 8px}
+  .hl{background:linear-gradient(transparent 58%, rgba(245,183,0,.75) 58%);padding:0 3px}
+  p{margin:0 0 12px}
+  .lead{font-size:17px;color:var(--ink-soft)}
+
+  .plan{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+  .plan .it{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:14px;border:2px dashed var(--c);background:var(--cs)}
+  .plan .ic{flex:0 0 44px;height:44px;border-radius:12px;background:var(--c);color:#fff;display:grid;place-items:center}
+  .plan .ic svg{width:28px;height:28px}
+  .plan b{display:block}
+  .plan small{color:var(--ink-soft);font-size:13px}
+  .note{font-size:14px;color:var(--ink-soft);margin-top:4px}
+
+  .btn{font-family:var(--sans);font-weight:700;font-size:16px;border:2px solid var(--ink);cursor:pointer;background:var(--cobalt);color:#fff;
+    padding:12px 22px;border-radius:12px;box-shadow:0 4px 0 var(--ink);transition:transform .1s, box-shadow .1s}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 5px 0 var(--ink)}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+  .btn.alt{background:#fff;color:var(--ink)}
+  .btn:focus-visible,.opt:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+
+  .brief-badge{width:76px;height:76px;border-radius:20px;background:var(--sc);color:#fff;display:grid;place-items:center;border:2px solid var(--ink);box-shadow:4px 4px 0 var(--ink);margin-bottom:12px}
+  .brief-badge svg{width:46px;height:46px}
+  .keys{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 20px}
+  .key{font-size:13px;font-weight:500;padding:6px 10px;border-radius:8px;background:var(--cs);border:1.5px solid var(--c)}
+
+  .qtop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .pill{font-family:var(--mono);font-size:12px;padding:4px 10px;border-radius:8px;background:var(--scs);border:1.5px solid var(--sc)}
+  .prompt{font-size:20px;font-weight:700;line-height:1.35;margin:14px 0 12px}
+  .visual{margin:0 0 16px;border-radius:14px;padding:12px 14px;background:#f8fafc;border:1.5px solid #dfe6ee}
+  .visual svg{width:100%;max-width:440px;height:auto;display:block;margin:0 auto}
+  .vcap{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);margin-bottom:4px}
+  .testcard{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:14.5px}
+  .testcard dt{font-family:var(--mono);font-size:12px;color:var(--ink-soft);padding-top:2px}
+  .testcard dd{margin:0}
+  .testcard .act{font-weight:700}
+  .ask{font-size:14px;font-weight:500;color:var(--ink-soft);margin-bottom:10px}
+  .opts{display:grid;gap:10px;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr))}
+  .opt{font-family:var(--sans);text-align:left;cursor:pointer;background:var(--cs);border:2px solid var(--c);border-radius:14px;padding:12px;
+    display:flex;align-items:center;gap:10px;font-size:15.5px;font-weight:700;color:var(--ink);position:relative;transition:transform .12s, box-shadow .12s}
+  .opt .oi{flex:0 0 40px;height:40px;border-radius:11px;background:#fff;border:2px solid var(--c);display:grid;place-items:center;color:var(--c)}
+  .opt .oi svg{width:26px;height:26px}
+  .opt small{display:block;font-weight:400;font-size:12px;color:var(--ink-soft)}
+  .opt:hover:not([disabled]){transform:translateY(-2px);box-shadow:0 4px 0 var(--c)}
+  .opt[disabled]{cursor:default}
+  .opt.dim{opacity:.4}
+  .opt.mine.right{background:#e3f6e7;border-color:var(--ok)}
+  .opt.mine.wrong{background:#ffe5e9;border-color:var(--miss)}
+  .opt.truth{border-style:dashed;border-color:var(--ok);background:#f1fbf3}
+  .stamp{margin-left:auto;flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;
+    padding:3px 7px;border-radius:5px;border:2px solid currentColor;transform:rotate(-6deg);background:#fff;animation:thump .3s ease}
+  .stamp.ok{color:var(--ok)} .stamp.no{color:var(--miss)} .stamp.ans{color:var(--ok);border-style:dashed}
+  @keyframes thump{from{transform:rotate(-6deg) scale(1.6);opacity:0}to{transform:rotate(-6deg) scale(1);opacity:1}}
+
+  .status{margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:#f4f1fb;border:1.5px solid #e2dcf3}
+  .status .m{display:flex;align-items:center;gap:10px;font-weight:500}
+  .dotm{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px}
+  .dotm.ok{background:var(--ok)} .dotm.no{background:var(--miss)}
+
+  /* bench log */
+  .log{position:sticky;top:14px;background:#fffdf5;border-radius:18px;border:2px solid var(--ink);box-shadow:6px 6px 0 var(--gold);overflow:hidden}
+  .clip{display:flex;align-items:center;gap:10px;background:var(--ink);color:#fff;padding:12px 16px}
+  .clip svg{width:24px;height:24px;color:var(--gold)}
+  .clip b{font-size:15px}
+  .clip span{margin-left:auto;font-family:var(--mono);font-size:11.5px;opacity:.85}
+  .logbody{padding:12px 14px 14px;max-height:68vh;overflow:auto;
+    background:repeating-linear-gradient(transparent 0 31px, rgba(31,181,214,.18) 31px 32px)}
+  .lrow{display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:start;padding:7px 0;border-bottom:1px dashed rgba(20,33,61,.15);font-size:13px}
+  .lrow.fresh{animation:slide .3s ease}
+  @keyframes slide{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+  .lid{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
+  .lres{font-family:var(--mono);font-size:10.5px;font-weight:500;padding:2px 6px;border-radius:5px;border:1.5px solid currentColor;white-space:nowrap}
+  .lres.ok{color:var(--ok)} .lres.no{color:var(--miss)}
+  .lwhat small{display:block;color:var(--ink-soft);font-size:12px}
+  .empty{font-size:13px;color:var(--ink-soft);font-style:italic;padding:10px 0}
+  .tally{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;border-top:2px solid var(--ink);background:#fff}
+  .tal{font-family:var(--mono);font-size:11.5px;padding:3px 8px;border-radius:6px;background:var(--cs);border:1.5px solid var(--c)}
+
+  /* final */
+  .scoreboard{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0 22px}
+  .sb{border:2px solid var(--ink);border-radius:14px;padding:12px;background:var(--cs);box-shadow:0 4px 0 var(--c)}
+  .sb .n{font-size:30px;font-weight:700;line-height:1}
+  .sb .l{font-size:13px;font-weight:500;margin-top:4px}
+  .meter{display:flex;gap:2px;margin-top:8px}
+  .meter i{flex:1;height:8px;border-radius:2px;background:rgba(20,33,61,.12)}
+  .meter i.on{background:var(--c)}
+  .fulllog{border:2px solid var(--ink);border-radius:16px;overflow:hidden;margin-bottom:22px;background:#fffdf5}
+  .fulllog table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .fulllog th{background:var(--ink);color:#fff;text-align:left;font-family:var(--mono);font-weight:500;font-size:12px;padding:9px 10px}
+  .fulllog td{padding:8px 10px;border-bottom:1px dashed rgba(20,33,61,.18);vertical-align:top}
+  .fulllog tr.sec td{background:var(--cs);font-weight:700;border-bottom:1.5px solid var(--c)}
+  .scroll{overflow-x:auto}
+  .ideas{list-style:none;margin:0 0 22px;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .ideas li{border-radius:14px;padding:14px;background:var(--cs);border-left:6px solid var(--c);font-size:15px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    .log{position:static}
+    .logbody{max-height:none}
+    .scoreboard{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .ideas{grid-template-columns:1fr}
+  }
+  @media (max-width:560px){
+    .card{padding:18px;box-shadow:5px 5px 0 var(--sc,var(--cobalt))}
+    .plan{grid-template-columns:1fr}
+    .opts{grid-template-columns:1fr !important}
+    .prompt{font-size:18px}
+    .testcard{grid-template-columns:1fr;gap:2px}
+    .testcard dt{padding-top:6px}
+    .seglabels div{font-size:9.5px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><b>Nexford University</b><span>AIA3200 · Foundations of Robotics and IoT</span></div>
+    <span class="chip">Practice Activity · Module 2</span>
+  </header>
+  <div class="ruler" id="ruler" aria-label="Progress"></div>
+  <main class="layout" id="layout">
+    <section class="card" id="stage" aria-live="polite"></section>
+    <aside class="log" id="log" aria-label="DoseMate v1 bench log"></aside>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var A='viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+  function target(dx,dy,spread){
+    var pts=[[0,0],[spread,-spread*.6],[-spread*.8,spread*.7]];
+    var dots=pts.map(function(p){return '<circle cx="'+(16+dx+p[0])+'" cy="'+(16+dy+p[1])+'" r="1.9" fill="currentColor" stroke="none"/>';}).join("");
+    return '<svg '+A+'><circle cx="16" cy="16" r="12"/><circle cx="16" cy="16" r="6.5" stroke-dasharray="2 2.5"/><circle cx="16" cy="16" r="1" stroke-width="1.6"/>'+dots+'</svg>';
+  }
+  var IC={
+    load:'<svg '+A+'><path d="M5 26h22"/><path d="M8 26l2-6h12l2 6"/><rect x="11" y="9" width="10" height="8" rx="1.5"/><path d="M14 9V7h4v2"/></svg>',
+    temp:'<svg '+A+'><path d="M13 19V7a3 3 0 0 1 6 0v12a5 5 0 1 1-6 0z"/><path d="M16 12v10"/><path d="M22 9h3M22 13h3"/></svg>',
+    motion:'<svg '+A+'><circle cx="17" cy="6.5" r="2.5"/><path d="M16 11l-3 7 4 3v6"/><path d="M13 18l-4 8"/><path d="M16 11l5 4 3-1"/><path d="M5 11h4M4 15h4"/></svg>',
+    dist:'<svg '+A+'><path d="M5 7v18M27 7v18"/><path d="M9 16h14"/><path d="M12 13l-3 3 3 3M20 13l3 3-3 3"/></svg>',
+    light:'<svg '+A+'><rect x="3" y="12" width="6" height="8" rx="1.5"/><rect x="23" y="12" width="6" height="8" rx="1.5"/><path d="M10 16h12" stroke-dasharray="2.5 2.5"/><path d="M6 8v2M26 8v2"/></svg>',
+    acc_both:target(0,0,1.6), acc_prec:target(5,-4,1.4), acc_avg:target(0,0,6), acc_none:target(5,4,5),
+    one:'<svg '+A+'><path d="M4 22h24"/><circle cx="9" cy="22" r="2.6" fill="currentColor"/><path d="M9 18V8"/><path d="M6 11l3-3 3 3"/></svg>',
+    two:'<svg '+A+'><path d="M4 26L28 6"/><circle cx="9" cy="21.8" r="2.6" fill="currentColor"/><circle cx="23" cy="10.2" r="2.6" fill="currentColor"/></svg>',
+    recal:'<svg '+A+'><path d="M25 10a10 10 0 1 0 1.5 8"/><path d="M26 4v6h-6"/><path d="M16 11v5l3 2"/></svg>',
+    artic:'<svg '+A+'><path d="M6 27h12"/><path d="M12 27v-5"/><circle cx="12" cy="20" r="2.2"/><path d="M13.5 18.5L19 10"/><circle cx="20" cy="8.5" r="2.2"/><path d="M22 9.5l5 4"/><path d="M26 16l2 1.5M27.5 12.5l1.5-1"/></svg>',
+    scara:'<svg '+A+'><rect x="4" y="22" width="8" height="5" rx="1"/><path d="M8 22V12"/><path d="M8 12h10"/><circle cx="18" cy="12" r="2"/><path d="M20 12h7"/><path d="M26 12v9"/><path d="M24 21h4"/></svg>',
+    gantry:'<svg '+A+'><path d="M4 27V7h24v20"/><path d="M4 11h24"/><rect x="13" y="9" width="6" height="4" rx="1"/><path d="M16 13v8"/><path d="M13.5 21h5"/></svg>',
+    delta:'<svg '+A+'><path d="M6 6h20l-10 4z"/><path d="M8 7l6 15M24 7l-6 15M16 10v12"/><circle cx="16" cy="23.5" r="2"/></svg>',
+    amr:'<svg '+A+'><rect x="5" y="13" width="22" height="9" rx="3"/><circle cx="10" cy="24.5" r="2.5"/><circle cx="22" cy="24.5" r="2.5"/><path d="M14 13v-3h4v3"/><path d="M12 7a6 6 0 0 1 8 0"/></svg>',
+    pass:'<svg '+A+'><rect x="5" y="5" width="22" height="22" rx="5"/><path d="M10 16.5l4 4 8-9"/></svg>',
+    fail:'<svg '+A+'><rect x="5" y="5" width="22" height="22" rx="5"/><path d="M11 11l10 10M21 11L11 21"/></svg>',
+    sensors:'<svg '+A+'><path d="M5 26h22"/><path d="M8 26l2-6h12l2 6"/><path d="M11 13a7 7 0 0 1 10 0"/><path d="M8 10a11 11 0 0 1 16 0"/></svg>',
+    readings:target(0,0,1.6),
+    robots:'<svg '+A+'><path d="M6 27h12"/><path d="M12 27v-5"/><circle cx="12" cy="20" r="2.2"/><path d="M13.5 18.5L19 10"/><circle cx="20" cy="8.5" r="2.2"/><path d="M22 9.5l5 4"/></svg>',
+    bench:'<svg '+A+'><rect x="7" y="6" width="18" height="22" rx="3"/><path d="M12 6V4h8v2"/><path d="M11 14l2 2 4-4M11 22h10"/></svg>'
+  };
+
+  /* palette for options */
+  var C={coral:["#ff6f59","#ffe9e5"],tang:["#ff9f1c","#fff1dc"],cyan:["#1fb5d6","#e0f6fb"],cobalt:["#0b5394","#e2ecf7"],gold:["#d99f00","#fff6d6"],
+         lime:["#3f9d33","#e6f6e2"],plum:["#741b47","#f6e4ed"],ok:["#2b9348","#e3f6e7"],miss:["#e03e52","#ffe5e9"]};
+  function o(key,label,icon,col,sub){return {key:key,label:label,icon:icon,c:C[col][0],cs:C[col][1],sub:sub||""};}
+
+  var SENSOR_OPTS=[o("load","Load (weight)","load","coral"),o("temp","Temperature","temp","tang"),o("motion","Motion","motion","cyan"),
+                   o("dist","Distance","dist","cobalt"),o("light","Light","light","gold")];
+  var ACC_OPTS=[o("both","Accurate and precise","acc_both","lime"),o("prec","Precise, not accurate","acc_prec","cyan"),
+                o("avg","Accurate on average, not precise","acc_avg","gold"),o("none","Neither","acc_none","coral")];
+  var CAL_OPTS=[o("one","One-point calibration","one","cobalt","Corrects a fixed offset"),o("two","Two-point calibration","two","plum","Also corrects the scale"),
+                o("recal","Scheduled recalibration","recal","cyan","Catches drift over time")];
+  var ROBOT_OPTS=[o("artic","Articulated","artic","coral","Rotating joints, often 6 axes"),o("scara","SCARA","scara","gold","Fast and precise on a flat plane"),
+                  o("gantry","Cartesian (gantry)","gantry","cyan","Straight lines on X, Y, Z rails"),o("delta","Parallel (delta)","delta","plum","Light arms working from above"),
+                  o("amr","Autonomous mobile robot","amr","lime","Maps and plans its own route")];
+  var TEST_OPTS=[o("pass","Pass","pass","ok","Actual matches expected"),o("fail","Fail","fail","miss","Actual differs from expected")];
+
+  var STATIONS=[
+    {key:"sensors",name:"Pick the Sensor",short:"Sensors",c:"#ff6f59",cs:"#ffe9e5",icon:"sensors",cols:2,
+     brief:"A device only knows what its sensors tell it. Five sensor types cover most business uses. For each job, choose the sensor that measures what the job needs.",
+     ask:"Which sensor fits this job?",
+     items:[
+       {q:"Know when a patient lifts doses out of DoseMate's pill cup.",a:"load",log:"Pill cup gets lighter",opts:SENSOR_OPTS},
+       {q:"Alert staff when a vaccine fridge starts to warm up.",a:"temp",log:"Vaccine fridge warming",opts:SENSOR_OPTS},
+       {q:"Count how many people are using a space, based on movement.",a:"motion",log:"Occupancy count",opts:SENSOR_OPTS},
+       {q:"Check how full a water tank is, measuring from above.",a:"dist",log:"Tank fill level",opts:SENSOR_OPTS},
+       {q:"Count items on a conveyor as each one blocks a beam.",a:"light",log:"Conveyor item count",opts:SENSOR_OPTS},
+       {q:"Help a robot stop before it reaches an obstacle in its path.",a:"dist",log:"Robot obstacle stop",opts:SENSOR_OPTS}
+     ]},
+    {key:"readings",name:"Trust the Reading",short:"Readings",c:"#1fb5d6",cs:"#e0f6fb",icon:"readings",cols:2,
+     brief:"Sam wants to know how far he can trust the sense step. First, judge sets of load cell readings against a known 10.0 g weight. Then choose the right fix for each sensor problem.",
+     ask:"",
+     items:[
+       {q:"Three readings of a 10.0 g test weight:",read:[10.4,10.4,10.4],a:"prec",log:"10.4, 10.4, 10.4 g",opts:ACC_OPTS,ask:"How would you describe this sensor?"},
+       {q:"Three readings of a 10.0 g test weight:",read:[9.5,10.6,9.9],a:"avg",log:"9.5, 10.6, 9.9 g",opts:ACC_OPTS,ask:"How would you describe this sensor?"},
+       {q:"Three readings of a 10.0 g test weight:",read:[11.0,11.9,11.3],a:"none",log:"11.0, 11.9, 11.3 g",opts:ACC_OPTS,ask:"How would you describe this sensor?"},
+       {q:"Three readings of a 10.0 g test weight:",read:[10.0,10.1,10.0],a:"both",log:"10.0, 10.1, 10.0 g",opts:ACC_OPTS,ask:"How would you describe this sensor?"},
+       {q:"The empty pill cup always reads 0.6 g too high, by the same amount every time.",a:"one",log:"Fixed 0.6 g offset",opts:CAL_OPTS,ask:"Which fix fits this problem?"},
+       {q:"An empty cup reads zero correctly, but the error grows as more weight sits in the cup.",a:"two",log:"Error grows with weight",opts:CAL_OPTS,ask:"Which fix fits this problem?"},
+       {q:"Last month the sensor was spot on. Since then its readings have slowly crept off, even though nothing in the cup changed.",a:"recal",log:"Slow creep over time",opts:CAL_OPTS,ask:"Which fix fits this problem?"}
+     ]},
+    {key:"robots",name:"Match the Robot",short:"Robots",c:"#d99f00",cs:"#fff6d6",icon:"robots",cols:1,
+     brief:"When a business buys a robot, the first question is what kind of movement the job needs. Match each job to the robot that moves the right way.",
+     ask:"Which robot fits this job best?",
+     items:[
+       {q:"Weld car body parts, reaching each joint from a different angle.",a:"artic",log:"Welding from many angles",opts:ROBOT_OPTS},
+       {q:"Place tiny parts onto a board at high speed, working on a flat surface.",a:"scara",log:"Fast small-part assembly",opts:ROBOT_OPTS},
+       {q:"Stack products across a large work area, moving in straight lines.",a:"gantry",log:"Large-area stacking",opts:ROBOT_OPTS},
+       {q:"Pick light snack bars off a fast-moving conveyor, working from above.",a:"delta",log:"Fast picking from a conveyor",opts:ROBOT_OPTS},
+       {q:"Carry supplies down a busy hospital hallway, steering around people.",a:"amr",log:"Busy hallway delivery",opts:ROBOT_OPTS}
+     ]},
+    {key:"bench",name:"Bench Test v1",short:"Bench test",c:"#3f9d33",cs:"#e6f6e2",icon:"bench",cols:2,
+     brief:"DoseMate v1 runs in Wokwi: an ESP32, a pushbutton standing in for \"dose removed,\" a micro servo that releases doses, and a reminder LED. Verification means comparing actual results with expected results. Mark each test as a pass or a fail.",
+     ask:"Does this test pass or fail?",
+     items:[
+       {test:{id:"T1",act:"A dose comes due on schedule.",exp:"The servo turns to release the dose, and the reminder LED turns on.",got:"The servo turns, and the reminder LED turns on."},a:"pass",log:"Dose comes due",opts:TEST_OPTS},
+       {test:{id:"T2",act:"Press the button while a dose is waiting.",exp:"The reminder LED turns off within 2 seconds.",got:"The reminder LED stays on for 10 seconds."},a:"fail",log:"Button with dose waiting",opts:TEST_OPTS},
+       {test:{id:"T3",act:"Press the button when no dose is waiting (edge case).",exp:"Nothing changes, and no dose is recorded.",got:"Nothing changes, and no dose is recorded."},a:"pass",log:"Button with no dose waiting",opts:TEST_OPTS},
+       {test:{id:"T4",act:"An AI tool added a delay() to the code. Press the button while a dose is waiting.",exp:"The reminder LED turns off.",got:"The button press is ignored, and the LED stays on."},a:"fail",log:"AI-changed code check",opts:TEST_OPTS}
+     ]}
+  ];
+
+  var IDEAS=[
+    {c:"#ff6f59",cs:"#ffe9e5",t:"A sensor measures something physical. \"The patient took the dose\" is a conclusion the code draws from that measurement, and it can be wrong."},
+    {c:"#1fb5d6",cs:"#e0f6fb",t:"Accuracy, precision, and resolution are different. Calibration corrects offset and scale, and drift is why sensors need to be checked again."},
+    {c:"#d99f00",cs:"#fff6d6",t:"Choosing a robot starts with the movement the job needs, and for a business it is a decision about staff time, errors, space, and cost."},
+    {c:"#3f9d33",cs:"#e6f6e2",t:"A prototype is only as good as its tests. Compare actual results with expected results, and treat AI-written code as a draft until it passes."}
+  ];
+
+  var TOTAL=STATIONS.reduce(function(n,s){return n+s.items.length;},0);
+  var st;
+  function reset(){st={screen:"intro",s:0,i:0,res:STATIONS.map(function(s){return s.items.map(function(){return null;});})};}
+  reset();
+
+  var $stage=document.getElementById("stage"),$log=document.getElementById("log"),$ruler=document.getElementById("ruler"),$layout=document.getElementById("layout");
+  function find(opts,k){for(var j=0;j<opts.length;j++) if(opts[j].key===k) return opts[j]; return null;}
+  function idFor(si,ii){return ["S","R","M","T"][si]+"-"+(ii<9?"0":"")+(ii+1);}
+
+  function renderRuler(){
+    var t="",l="";
+    STATIONS.forEach(function(s,si){
+      s.items.forEach(function(_,ii){
+        var r=st.res[si][ii],cls="tick"+(ii===0?" first":"");
+        if(r) cls+=r.ok?" ok":" no";
+        else if(st.screen==="item"&&si===st.s&&ii===st.i) cls+=" cur";
+        t+='<span class="'+cls+'" style="--seg:'+s.c+'"></span>';
+      });
+      l+='<div style="flex:'+s.items.length+';--seg:'+s.c+'" class="'+((st.screen!=="intro"&&st.screen!=="final"&&si===st.s)?"on":"")+'">'+s.short+'</div>';
+    });
+    var done=st.res.reduce(function(n,a){return n+a.filter(Boolean).length;},0);
+    $ruler.innerHTML='<div class="ticks" aria-hidden="true">'+t+'</div><div class="seglabels" aria-hidden="true">'+l+'</div><span class="sr">'+done+' of '+TOTAL+' items answered.</span>';
+  }
+
+  function logRows(si){
+    var s=STATIONS[si],rows="";
+    s.items.forEach(function(it,ii){
+      var r=st.res[si][ii]; if(!r) return;
+      var ans=find(it.opts,it.a).label, mine=find(it.opts,r.k).label;
+      var fresh=(st.screen==="item"&&si===st.s&&ii===st.i)?" fresh":"";
+      rows+='<div class="lrow'+fresh+'"><span class="lid">'+idFor(si,ii)+'</span><span class="lwhat">'+it.log+'<small>'+(r.ok?ans:'You: '+mine+' · Answer: '+ans)+'</small></span><span class="lres '+(r.ok?"ok":"no")+'">'+(r.ok?"Correct":"Incorrect")+'</span></div>';
+    });
+    return rows;
+  }
+  function renderLog(){
+    if(st.screen==="final"){$log.innerHTML="";return;}
+    var tallies=STATIONS.map(function(s,si){
+      var a=st.res[si].filter(Boolean).length;
+      return '<span class="tal" style="--c:'+s.c+';--cs:'+s.cs+'">'+s.short+' '+a+'/'+s.items.length+'</span>';
+    }).join("");
+    var body;
+    if(st.screen==="intro"){
+      body='<div class="empty">Every answer you give is written here as a numbered log entry, the way product teams record their checks.</div>';
+    } else {
+      var s=STATIONS[st.s], rows=logRows(st.s);
+      body='<div class="eyebrow" style="--sc:'+s.c+';margin:2px 0 4px">'+s.name+'</div>'+(rows||'<div class="empty">No entries yet for this station.</div>');
+    }
+    $log.innerHTML='<div class="clip">'+IC.bench+'<b>DoseMate v1 Bench Log</b><span>'+TOTAL+' checks</span></div><div class="logbody">'+body+'</div><div class="tally">'+tallies+'</div>';
+  }
+
+  function setStation(s){$stage.style.setProperty("--sc",s?s.c:"#0b5394");$stage.style.setProperty("--scs",s?s.cs:"#e2ecf7");}
+
+  function intro(){
+    setStation(null);
+    var plan=STATIONS.map(function(s,si){
+      return '<div class="it" style="--c:'+s.c+';--cs:'+s.cs+'"><span class="ic">'+IC[s.icon]+'</span><div><b>'+(si+1)+'. '+s.name+'</b><small>'+s.items.length+' checks</small></div></div>';
+    }).join("");
+    $stage.innerHTML='<div class="eyebrow">Practice Activity · Sensing and Acting</div>'+
+      '<h1>Bench Test <span class="hl">DoseMate v1</span></h1>'+
+      '<p class="lead">Leadership wants to see something that works before CareLoop spends real money. Sam asks how far he can trust what the device says, and Grace only wants alerts she can trust. Work through four stations to check DoseMate\'s sensing, its acting, and its first prototype.</p>'+
+      '<div class="plan">'+plan+'</div>'+
+      '<p class="note">You get one attempt per check. Your answer is logged, and you move straight on. About 15 minutes.</p>'+
+      '<button class="btn" id="go">Open Station 1</button>';
+    document.getElementById("go").onclick=function(){st.screen="brief";st.s=0;render(true);};
+  }
+
+  function brief(){
+    var s=STATIONS[st.s]; setStation(s);
+    var seen={},keys="";
+    s.items.forEach(function(it){it.opts.forEach(function(op){if(!seen[op.key]){seen[op.key]=1;keys+='<span class="key" style="--c:'+op.c+';--cs:'+op.cs+'">'+op.label+'</span>';}});});
+    $stage.innerHTML='<div class="brief-badge">'+IC[s.icon]+'</div><div class="eyebrow">Station '+(st.s+1)+' of '+STATIONS.length+'</div>'+
+      '<h2>'+s.name+'</h2><p class="lead">'+s.brief+'</p><div class="keys">'+keys+'</div>'+
+      '<button class="btn" id="go">Start '+s.items.length+' checks</button>';
+    document.getElementById("go").onclick=function(){st.screen="item";st.i=0;render(true);};
+  }
+
+  function readingsSVG(vals){
+    var lo=8.5,hi=12.5,W=340,x=function(v){return 20+(v-lo)/(hi-lo)*(W-40);};
+    var ticks="";
+    for(var v=9;v<=12;v+=1){ticks+='<line x1="'+x(v)+'" y1="56" x2="'+x(v)+'" y2="62" stroke="#4b5671" stroke-width="1.5"/><text x="'+x(v)+'" y="76" text-anchor="middle" font-size="11" font-family="DM Mono, monospace" fill="#4b5671">'+v.toFixed(1)+'</text>';}
+    var counts={},dots="";
+    vals.forEach(function(v){var k=v.toFixed(1);counts[k]=(counts[k]||0)+1;var yy=44-(counts[k]-1)*12;
+      dots+='<circle cx="'+x(v)+'" cy="'+yy+'" r="5.5" fill="#1fb5d6" stroke="#14213d" stroke-width="1.5"/>';});
+    return '<svg viewBox="0 0 '+W+' 84" role="img" aria-label="Readings '+vals.join(", ")+' grams against a true value of 10.0 grams">'+
+      '<line x1="20" y1="59" x2="'+(W-20)+'" y2="59" stroke="#14213d" stroke-width="2"/>'+ticks+
+      '<line x1="'+x(10)+'" y1="10" x2="'+x(10)+'" y2="59" stroke="#741b47" stroke-width="2" stroke-dasharray="4 3"/>'+
+      '<text x="'+(x(10)-4)+'" y="12" text-anchor="end" font-size="11" font-family="DM Mono, monospace" fill="#741b47">true 10.0 g</text>'+dots+'</svg>';
+  }
+
+  function item(){
+    var s=STATIONS[st.s],it=s.items[st.i],r=st.res[st.s][st.i]; setStation(s);
+    var vis="";
+    if(it.read) vis='<div class="visual"><div class="vcap">Readings: '+it.read.map(function(v){return v.toFixed(1)+" g";}).join(", ")+'</div>'+readingsSVG(it.read)+'</div>';
+    if(it.test) vis='<div class="visual"><dl class="testcard"><dt>Test ID</dt><dd class="act">'+it.test.id+'</dd><dt>Input or action</dt><dd>'+it.test.act+'</dd><dt>Expected</dt><dd>'+it.test.exp+'</dd><dt>Actual</dt><dd>'+it.test.got+'</dd></dl></div>';
+    var prompt=it.test?"":'<div class="prompt">'+it.q+'</div>';
+    var opts=it.opts.map(function(op){
+      var cls="opt",stamp="";
+      if(r){
+        if(op.key===r.k){cls+=" mine "+(r.ok?"right":"wrong");stamp='<span class="stamp '+(r.ok?"ok":"no")+'">'+(r.ok?"Correct":"Your pick")+'</span>';}
+        else if(op.key===it.a){cls+=" truth";stamp='<span class="stamp ans">Answer</span>';}
+        else cls+=" dim";
+      }
+      return '<button class="'+cls+'" data-k="'+op.key+'" style="--c:'+op.c+';--cs:'+op.cs+'"'+(r?" disabled":"")+'><span class="oi">'+IC[op.icon]+'</span><span>'+op.label+(op.sub?'<small>'+op.sub+'</small>':'')+'</span>'+stamp+'</button>';
+    }).join("");
+    var last=st.i===s.items.length-1;
+    var nxt=last?(st.s===STATIONS.length-1?"See the full bench log":"Open Station "+(st.s+2)):"Next check";
+    var status="";
+    if(r){
+      status='<div class="status"><div class="m">'+(r.ok?'<span class="dotm ok" aria-hidden="true">&#10003;</span>Logged as correct.':'<span class="dotm no" aria-hidden="true">&#215;</span>Logged as incorrect. The answer is '+find(it.opts,it.a).label+'.')+'</div><button class="btn" id="next">'+nxt+'</button></div>';
+    }
+    $stage.innerHTML='<div class="qtop"><div class="eyebrow">Station '+(st.s+1)+' · '+s.name+'</div><span class="pill">'+idFor(st.s,st.i)+' · Check '+(st.i+1)+' of '+s.items.length+'</span></div>'+
+      (it.test?'<div style="height:12px"></div>':'')+prompt+vis+
+      '<div class="ask">'+(it.ask||s.ask)+'</div><div class="opts" style="--cols:'+(it.opts.length===2?2:s.cols)+'">'+opts+'</div>'+status;
+    if(!r){Array.prototype.forEach.call($stage.querySelectorAll(".opt"),function(b){b.onclick=function(){answer(b.getAttribute("data-k"));};});}
+    else{var n=document.getElementById("next");n.onclick=advance;n.focus({preventScroll:true});}
+  }
+
+  function answer(k){
+    if(st.res[st.s][st.i]) return;
+    var it=STATIONS[st.s].items[st.i];
+    st.res[st.s][st.i]={k:k,ok:k===it.a};
+    render(false);
+  }
+  function advance(){
+    var s=STATIONS[st.s];
+    if(st.i<s.items.length-1){st.i++;}
+    else if(st.s<STATIONS.length-1){st.s++;st.i=0;st.screen="brief";}
+    else st.screen="final";
+    render(true);
+  }
+
+  function fin(){
+    setStation(null);
+    var right=0;
+    var board=STATIONS.map(function(s,si){
+      var c=st.res[si].filter(function(r){return r&&r.ok;}).length; right+=c;
+      var m=s.items.map(function(_,ii){return '<i class="'+(st.res[si][ii]&&st.res[si][ii].ok?"on":"")+'"></i>';}).join("");
+      return '<div class="sb" style="--c:'+s.c+';--cs:'+s.cs+'"><div class="n">'+c+'/'+s.items.length+'</div><div class="l">'+s.name+'</div><div class="meter">'+m+'</div></div>';
+    }).join("");
+    var rows="";
+    STATIONS.forEach(function(s,si){
+      rows+='<tr class="sec" style="--c:'+s.c+';--cs:'+s.cs+'"><td colspan="4">'+(si+1)+'. '+s.name+'</td></tr>';
+      s.items.forEach(function(it,ii){
+        var r=st.res[si][ii];
+        rows+='<tr><td style="font-family:var(--mono);font-size:12px">'+idFor(si,ii)+'</td><td>'+it.log+'</td><td>'+find(it.opts,it.a).label+'</td><td><span class="lres '+(r.ok?"ok":"no")+'">'+(r.ok?"Correct":"Incorrect")+'</span></td></tr>';
+      });
+    });
+    var ideas=IDEAS.map(function(d){return '<li style="--c:'+d.c+';--cs:'+d.cs+'">'+d.t+'</li>';}).join("");
+    $stage.innerHTML='<div class="eyebrow">Practice Activity complete</div><h1>Bench Log <span class="hl">Complete</span></h1>'+
+      '<p class="lead">You logged '+right+' of '+TOTAL+' checks as correct. The log below lists every check with its answer, in the same spirit as the verification log in your Module 2 assignment.</p>'+
+      '<div class="scoreboard">'+board+'</div>'+
+      '<div class="fulllog"><div class="scroll"><table><thead><tr><th>ID</th><th>Check</th><th>Answer</th><th>Your result</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
+      '<h3>Four ideas to carry into your requirements and prototype</h3><ul class="ideas">'+ideas+'</ul>'+
+      '<button class="btn alt" id="again">Start again</button>';
+    document.getElementById("again").onclick=function(){reset();render(true);};
+  }
+
+  function render(top){
+    $layout.className="layout"+(st.screen==="final"?" full":"");
+    renderRuler();
+    if(st.screen==="intro") intro(); else if(st.screen==="brief") brief(); else if(st.screen==="item") item(); else fin();
+    renderLog();
+    if(top){
+      try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);}
+      if(st.screen!=="item"){var b=$stage.querySelector(".btn");if(b)b.focus({preventScroll:true});}
+    }
+  }
+  render(false);
+})();
+</script>
+</body>
+</html>
